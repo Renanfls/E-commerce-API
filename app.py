@@ -19,11 +19,12 @@ login_manager.login_view = 'login'
 CORS(app)
 
 # Modelagem
-# User (id, username, password)
+# User (id, username, password, cart)
 class User(db.Model, UserMixin):
   id = db.Column(db.Integer, primary_key=True)
   username = db.Column(db.String(80), nullable=False, unique=True)
   password = db.Column(db.String(80), nullable=True)
+  cart = db.relationship('CartItem', backref='user', lazy=True)
 
 # Produto (id, name, price, description)
 class Product(db.Model):
@@ -31,6 +32,14 @@ class Product(db.Model):
   name = db.Column(db.String(120), nullable=False)
   price = db.Column(db.Float, nullable=False)
   description = db.Column(db.Text, nullable=True)
+
+# CartItem
+class CartItem(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+  product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+  #quantity = db.Column(db.Integer, nullable=False, default=1)
+  
 
 # Autenticação
 @login_manager.user_loader
