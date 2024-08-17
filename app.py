@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from flask_login import LoginManager, UserMixin, login_user , login_required, logout_user
+from flask_login import LoginManager, UserMixin, login_user , login_required, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
 
 load_dotenv()
@@ -92,7 +92,7 @@ def delete_product(product_id):
     return jsonify({"message": "Product deleted successfully"})
   return jsonify({"message": "Product not found"}), 404
 
-# GET DETAILS
+# GET_DETAILS
 @app.route('/api/products/<int:product_id>', methods=["GET"])
 def get_details(product_id):
   product = Product.query.get(product_id)
@@ -137,10 +137,60 @@ def get_products():
   } for product in products]
   return jsonify(products_list)
 
-# /
-@app.route('/')
-def home():
-  return 'Hello World'
-  
+# ADD_PRODUCT_TO_CART
+@app.route('/api/cart/add/<int:product_id>', methods=["POST"])
+@login_required 
+def add_to_cart(product_id):
+  user = User.query.get_or_404(int(current_user.id))
+  product = Product.query.get(product_id)
+
+  if user and product:
+    cart_item = CartItem(user_id=user.id, product_id=product.id)
+    db.session.add(cart_item)
+    db.session.commit()
+    return jsonify({"message": "Product added to cart successfully"})
+  return jsonify({"message": "Failed to add product to cart"}), 400
+
+# DELETE_PRODUCT_TO_CART
+@app.route('/api/cart/remove/<int:product_id>', methods=["DELETE"])
+@login_required
+def remove_from_cart(product_id):
+  cart_item = CartItem.query.filter_by(user_id=current_user.id, product_id=product_id).first()
+  if cart_item:
+    db.session.delete(cart_item)
+    db.session.commit()
+    return jsonify({"message": "Product deleted to cart successfully"})
+  return jsonify({"message": "Failed to deleted product to cart"}), 400
+
+# GET_PRODUCTS_TO_CART
+@app.route('/api/cart', methods=["GET"])
+@login_required
+def view_cart():
+  user = User.query.get_or_404(int(current_user.id))
+  cart_items = user.cart
+
+  # get all cart items
+  product_ids = [item.product_id for item in cart_items]
+  # get all products with their ids
+  products = {product.id: product for product in Product.query.filter(Product.id.in_(product_ids)).all()}
+
+  cart_content = [{
+      "id": cart_item.id,
+      "user_id": cart_item.user_id,
+      "product_id": cart_item.product_id,
+      "product_name": products[cart_item.product_id].name,
+      "product_price": products[cart_item.product_id].price,
+  } for cart_item in cart_items]
+  return jsonify(cart_content)
+
+# CHECKOUT
+@app.route('/api/cart/checkout', methods=["POST"])
+@login_required
+def checkout():
+  user = User.query.get_or_404(int(current_user.id))
+  db.session.query(CartItem).filter_by(user_id=user.id).delete()
+  db.session.commit()
+  return jsonify({"message": "Checkout successful. Cart has been cleared."})
+
 if __name__ == "__main__":
 	app.run(debug=True)
