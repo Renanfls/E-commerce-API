@@ -137,3 +137,7 @@ A aplicação usa SQLAlchemy como ORM com um banco de dados especificado pela va
 ## Executando a Aplicação
 
 Para executar a aplicação, certifique-se de que todas as dependências estejam instaladas e as variáveis de ambiente estejam configuradas. Em seguida, execute o script com Python.
+
+```Shell
+pip3 install -r requirements.txt
+```
